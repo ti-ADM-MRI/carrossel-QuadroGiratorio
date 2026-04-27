@@ -1,1 +1,256 @@
 
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .cube-container {
+      perspective: 1200px;
+      width: 300px;
+      height: 300px;
+      cursor: pointer;
+    }
+    .cube {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    }
+    .face {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: rgba(30,30,50,0.95);
+      border: 2px solid gold;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.3);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      color: white;
+      font-weight: bold;
+      backdrop-filter: blur(2px);
+    }
+    .face h2 { color: gold; margin-bottom: 10px; }
+    .face img { max-width: 80%; max-height: 120px; border-radius: 16px; margin: 10px; }
+    .face p { font-size: 14px; margin: 8px 0; overflow-y: auto; max-height: 140px; }
+    
+    /* Posicionamento das faces */
+    .front  { transform: rotateY(0deg) translateZ(150px); background: linear-gradient(145deg, #1a2a3a, #0f1a24); }
+    .back   { transform: rotateY(180deg) translateZ(150px); background: linear-gradient(145deg, #3a1a2a, #240f1a); }
+    .right  { transform: rotateY(90deg) translateZ(150px); background: linear-gradient(145deg, #2a3a1a, #1a240f); }
+    .left   { transform: rotateY(-90deg) translateZ(150px); background: linear-gradient(145deg, #3a2a1a, #241f0f); }
+    .top    { transform: rotateX(90deg) translateZ(150px); background: linear-gradient(145deg, #1a2a3a, #0f1a24); }
+    .bottom { transform: rotateX(-90deg) translateZ(150px); background: linear-gradient(145deg, #2a1a3a, #1f0f24); }
+
+    .status {
+      margin-top: 30px;
+      color: cyan;
+      text-align: center;
+      font-family: monospace;
+      background: #000000aa;
+      padding: 8px;
+      border-radius: 40px;
+    }
+    button {
+      background: gold;
+      border: none;
+      padding: 8px 20px;
+      margin: 8px;
+      border-radius: 40px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    @keyframes pulse {
+      0% { text-shadow: 0 0 2px cyan; }
+      100% { text-shadow: 0 0 12px cyan; }
+    }
+    .highlight { animation: pulse 0.6s infinite alternate; }
+  </style>
+</head>
+<body>
+<div>
+  <div class="cube-container">
+    <div class="cube" id="magicCube">
+      <!-- 6 faces -->
+      <div class="face front" id="face-front">
+        <h2>📰 ÚLTIMAS</h2>
+        <div id="front-content"></div>
+      </div>
+      <div class="face back" id="face-back">
+        <h2>⚽ ESPORTE</h2>
+        <div id="back-content"></div>
+      </div>
+      <div class="face right" id="face-right">
+        <h2>🚗 AUTOMOTIVO</h2>
+        <div id="right-content"></div>
+      </div>
+      <div class="face left" id="face-left">
+        <h2>🎬 ENTRETENIMENTO</h2>
+        <div id="left-content"></div>
+      </div>
+      <div class="face top" id="face-top">
+        <h2>💡 DICA TECH</h2>
+        <div id="top-content"></div>
+      </div>
+      <div class="face bottom" id="face-bottom">
+        <h2>📈 FINANÇAS</h2>
+        <div id="bottom-content"></div>
+      </div>
+    </div>
+  </div>
+  <div class="status">
+    🔄 Girando automaticamente... <strong>Clique no cubo para parar e ver a face escolhida!</strong>
+  </div>
+  <div style="text-align:center; margin-top: 12px;">
+    <button onclick="resetRotation()">🔄 Resetar orientação</button>
+    <button onclick="startAutoRotate()">▶ Girar novamente</button>
+  </div>
+</div>
+
+<script>
+  let currentXRot = -15;
+  let currentYRot = 25;
+  let autoRotateInterval = null;
+  let autoActive = true;
+  const cube = document.getElementById('magicCube');
+
+  // ========== DADOS DAS FACES (IMAGENS + NOTÍCIAS) ==========
+  // Você pode trocar por URLs reais de imagens
+  const faceData = {
+    front: { 
+      title: "Notícias BR", 
+      img: "https://picsum.photos/id/20/150/100", 
+      text: "🇧🇷 Governo anuncia nova faixa de IR. ✅ Reforma tributária avança no Senado. 💡 Projeção de PIB sobe para 2,8%."
+    },
+    back: {
+      title: "Série A 🔥",
+      img: "https://picsum.photos/id/123/150/100",
+      text: "🏆 Atlético-MG 3 x 4 Flamengo • Domingo 23:30 • Palpite: 2.3 odds • Destaque: Hulk vs Gabigol."
+    },
+    right: {
+      title: "Hyundai Kona",
+      img: "https://picsum.photos/id/106/150/100",
+      text: "⚡ Torque: 27 kgfm • Câmbio dupla embreagem 6 marchas • Uso urbano + elétrico • Baixo consumo no trânsito pesado."
+    },
+    left: {
+      title: "Streaming & +",
+      img: "https://picsum.photos/id/0/150/100",
+      text: "🎬 ‘Round 6’ retorna em junho • 🎭 Novidades da Disney+ • 🎧 Podcast do momento lidera charts."
+    },
+    top: {
+      title: "Gadgets",
+      img: "https://picsum.photos/id/26/150/100",
+      text: "📱 Galaxy Z Fold 6 com tela 7.8” • 💻 M4 MacBook Air já disponível • 🔋 Carregamento solar em notebooks."
+    },
+    bottom: {
+      title: "Cripto & Ações",
+      img: "https://picsum.photos/id/28/150/100",
+      text: "📊 Bitcoin oscila perto dos $72k • 💎 NFT volume sobe 40% • 🏦 Selic mantida em 10,5%."
+    }
+  };
+
+  // Carregar conteúdo nas faces
+  function loadFaceContent(faceId, data) {
+    const container = document.getElementById(`${faceId}-content`);
+    if (container) {
+      container.innerHTML = `
+        <img src="${data.img}" alt="${data.title}" style="width:130px; object-fit:cover; border-radius:12px; border:1px solid gold;">
+        <p style="font-size:13px; margin-top:10px;">${data.text}</p>
+        <small style="color:cyan;">📌 ${data.title}</small>
+      `;
+    }
+  }
+
+  loadFaceContent('front', faceData.front);
+  loadFaceContent('back', faceData.back);
+  loadFaceContent('right', faceData.right);
+  loadFaceContent('left', faceData.left);
+  loadFaceContent('top', faceData.top);
+  loadFaceContent('bottom', faceData.bottom);
+
+  // Aplicar rotação atual
+  function updateCubeRotation() {
+    cube.style.transform = `rotateX(${currentXRot}deg) rotateY(${currentYRot}deg)`;
+  }
+
+  // Gira automaticamente (eixo Y e X levemente para sensação 3D)
+  function autoRotateStep() {
+    if (!autoActive) return;
+    currentYRot = (currentYRot + 2) % 360;
+    currentXRot = currentXRot + 0.5;
+    if (currentXRot > 30) currentXRot = -15;
+    updateCubeRotation();
+  }
+
+  function startAutoRotate() {
+    if (autoRotateInterval) clearInterval(autoRotateInterval);
+    autoActive = true;
+    autoRotateInterval = setInterval(autoRotateStep, 60);
+    document.querySelector('.status').innerHTML = '🌀 Girando... <strong>Clique no cubo para parar e escolher uma face!</strong>';
+  }
+
+  function stopAutoRotateAndHighlightFront() {
+    if (!autoActive) return;
+    autoActive = false;
+    if (autoRotateInterval) clearInterval(autoRotateInterval);
+    autoRotateInterval = null;
+    
+    // Destaca a face que ficou mais à frente (baseado na orientação Y)
+    // Simplificação: pegamos o ângulo Y e determinamos qual face está "olhando" para o usuário
+    const angle = ((currentYRot % 360) + 360) % 360;
+    let selectedFace = "front";
+    if (angle >= 45 && angle < 135) selectedFace = "right";
+    else if (angle >= 135 && angle < 225) selectedFace = "back";
+    else if (angle >= 225 && angle < 315) selectedFace = "left";
+    else selectedFace = "front";
+    
+    // Ajuste fino para inclinação X (se muito inclinado, top ou bottom podem estar visíveis)
+    const xAngle = ((currentXRot % 360) + 360) % 360;
+    if (xAngle > 40 && xAngle < 140) selectedFace = "top";
+    else if (xAngle > 220 && xAngle < 320) selectedFace = "bottom";
+    
+    // Destacar a face escolhida
+    document.querySelectorAll('.face').forEach(face => face.classList.remove('highlight'));
+    const targetFace = document.getElementById(`face-${selectedFace}`);
+    if (targetFace) targetFace.classList.add('highlight');
+    
+    document.querySelector('.status').innerHTML = `✨ PAROU! Face destacada: <strong style="color:gold;">${selectedFace.toUpperCase()}</strong> ✨<br> (Clique em "Girar novamente")`;
+  }
+
+  // Evento de clique no cubo
+  cube.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (autoActive) {
+      stopAutoRotateAndHighlightFront();
+    }
+  });
+
+  function resetRotation() {
+    currentXRot = -15;
+    currentYRot = 25;
+    updateCubeRotation();
+    if (!autoActive) {
+      // se estiver parado, só reseta orientação
+      document.querySelectorAll('.face').forEach(face => face.classList.remove('highlight'));
+      document.querySelector('.status').innerHTML = '🔄 Orientação resetada. <strong>Clique em "Girar novamente"</strong>';
+    }
+  }
+
+  // iniciar automático ao carregar
+  startAutoRotate();
+</script>
+</body>
+</html>
